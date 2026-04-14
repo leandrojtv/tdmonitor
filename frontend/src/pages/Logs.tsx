@@ -20,7 +20,7 @@ export function LogsPage() {
     queryFn: () => apiService.getLogs(page, 50),
     refetchInterval: 30000
   });
-  const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: apiService.getPanels });
+  const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: () => apiService.getPanels() });
   const schedulesQuery = useQuery({ queryKey: ['schedules'], queryFn: apiService.getSchedules });
   const connectionsQuery = useQuery({ queryKey: ['connections'], queryFn: apiService.getConnections });
 

@@ -11,8 +11,8 @@ type Props = {
   connections: TeradataConnection[];
   panels: PanelDefinition[];
   onClose: () => void;
-  onSave: (payload: Pick<Schedule, 'connectionId' | 'name' | 'cronExpression' | 'panelIds'>) => Promise<void>;
-  onRunNow?: () => Promise<void>;
+  onSave: (payload: Pick<Schedule, 'connectionId' | 'name' | 'cronExpression' | 'panelIds'>) => Promise<unknown>;
+  onRunNow?: () => Promise<unknown>;
 };
 
 export function ScheduleForm({ open, schedule, connections, panels, onClose, onSave, onRunNow }: Props) {

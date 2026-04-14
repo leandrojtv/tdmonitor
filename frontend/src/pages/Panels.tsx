@@ -14,7 +14,7 @@ const categoryLabels: Record<string, string> = {
   access: 'Acesso'
 };
 
-const categoryIcons: Record<string, ComponentType<{ size?: number }>> = {
+const categoryIcons: Record<string, ComponentType<{ size?: string | number }>> = {
   storage: Database,
   performance: Activity,
   security: Shield,

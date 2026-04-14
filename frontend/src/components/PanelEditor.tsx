@@ -74,11 +74,12 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   const highlightedSql = useMemo(() => sqlQuery.replace(sqlKeywords, '<span class="sql-key">$1</span>'), [sqlQuery]);
 
   if (!open || !panel) return null;
+  const currentPanel = panel;
 
   async function handleValidate() {
     setLoading(true);
     try {
-      await api.post(`/panels/${panel.id}/validate-sql`, { sql: sqlQuery });
+      await api.post(`/panels/${currentPanel.id}/validate-sql`, { sql: sqlQuery });
       toast.success('SQL válido');
     } finally {
       setLoading(false);
@@ -88,7 +89,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   async function handlePreview() {
     setLoading(true);
     try {
-      const response = await api.post(`/panels/${panel.id}/preview`);
+      const response = await api.post(`/panels/${currentPanel.id}/preview`);
       const data = response.data.data;
       setRawPreview(data.rows ?? []);
       setDurationMs(data.duration_ms ?? 0);
@@ -110,7 +111,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   async function autoDetectFields() {
     setLoading(true);
     try {
-      const response = await api.post(`/panels/${panel.id}/preview`);
+      const response = await api.post(`/panels/${currentPanel.id}/preview`);
       const rows = response.data.data.rows ?? [];
       if (!rows.length) {
         toast('Sem linhas para detectar campos');
@@ -140,13 +141,13 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   async function save(executeAfterSave = false) {
     setLoading(true);
     try {
-      await apiService.updatePanel(panel.id, {
+      await apiService.updatePanel(currentPanel.id, {
         sqlQuery,
         fieldMappings: { result_type: resultType, mappings }
       });
 
       if (executeAfterSave) {
-        await apiService.executePanel(panel.id);
+        await apiService.executePanel(currentPanel.id);
       }
 
       toast.success(executeAfterSave ? 'Salvo e executado com sucesso' : 'Painel salvo com sucesso');

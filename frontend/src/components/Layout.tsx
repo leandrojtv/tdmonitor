@@ -16,7 +16,7 @@ import { apiService } from '../services/api';
 type NavItem = {
   to: string;
   label: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: ComponentType<{ size?: string | number }>;
 };
 
 const navItems: NavItem[] = [

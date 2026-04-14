@@ -8,7 +8,7 @@ type Props = {
   existingNames: string[];
   initialData?: TeradataConnection | null;
   onClose: () => void;
-  onSave: (payload: ConnectionPayload) => Promise<void>;
+  onSave: (payload: ConnectionPayload) => Promise<unknown>;
 };
 
 type ParamEntry = { key: string; value: string };

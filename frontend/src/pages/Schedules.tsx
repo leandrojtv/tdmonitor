@@ -28,7 +28,7 @@ export function SchedulesPage() {
 
   const schedulesQuery = useQuery({ queryKey: ['schedules'], queryFn: apiService.getSchedules });
   const connectionsQuery = useQuery({ queryKey: ['connections'], queryFn: apiService.getConnections });
-  const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: apiService.getPanels });
+  const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: () => apiService.getPanels() });
 
   const saveMutation = useMutation({
     mutationFn: async (payload: Pick<Schedule, 'connectionId' | 'name' | 'cronExpression' | 'panelIds'>) => {
