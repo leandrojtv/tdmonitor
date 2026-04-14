@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS builder
+FROM node:18-bookworm-slim AS builder
 WORKDIR /app
 
 RUN apt-get update \
@@ -16,7 +16,7 @@ COPY src ./src
 RUN npm run build
 RUN npm prune --omit=dev && npm cache clean --force
 
-FROM node:20-bookworm-slim
+FROM node:18-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update \
