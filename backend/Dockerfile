@@ -26,7 +26,7 @@ FROM node:18-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends default-jre-headless \
+  && apt-get install -y --no-install-recommends default-jre-headless netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 RUN JVM_LIB_PATH="$(find /usr/lib/jvm -name libjvm.so | head -n 1)" \
