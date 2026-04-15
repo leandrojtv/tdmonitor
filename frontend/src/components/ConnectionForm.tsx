@@ -29,8 +29,6 @@ export function ConnectionForm({ open, existingNames, initialData, onClose, onSa
     Object.entries(initialData?.jdbcParams ?? {}).map(([key, value]) => ({ key, value }))
   );
 
-  if (!open) return null;
-
   const validationError = useMemo(() => {
     if (!name.trim()) return 'Nome é obrigatório';
     const duplicated = existingNames.includes(name.trim()) && name.trim() !== (initialData?.name ?? '');
@@ -56,6 +54,8 @@ export function ConnectionForm({ open, existingNames, initialData, onClose, onSa
 
     return `jdbc:teradata://${host || '{host}'}/DATABASE=${databaseName || '{database}'},DBS_PORT=${port}${extras ? `,${extras}` : ''}`;
   }, [databaseName, host, jdbcParamsObject, port]);
+
+  if (!open) return null;
 
   async function handleSave() {
     if (validationError) return;
