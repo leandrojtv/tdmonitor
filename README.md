@@ -170,6 +170,7 @@ flowchart LR
 - **"Conexão com Teradata falhou"** → verifique host, porta, firewall e se o JAR JDBC está disponível.
 - **"Dados não aparecem no dashboard"** → confirme se o schedule está ativo e verifique logs em **Logs de Execução**.
 - **"Erro JDBC ClassNotFound"** → confirme se `terajdbc4.jar` está em `./jdbc/` e montado no volume do backend.
+- **Build em Mac (Apple Silicon) falhando no módulo `java/jdbc`** → mantenha `BACKEND_PLATFORM=linux/amd64` no `.env` para build/execução compatível.
 - **Container não sobe** → rode `docker-compose logs <serviço>` e revise variáveis em `.env`.
 
 ## Permissões Necessárias no Teradata
