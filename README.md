@@ -87,6 +87,7 @@ td-monitor/
 | `FRONTEND_PORT` | `80` | Porta exposta pelo container frontend (nginx). |
 | `VITE_API_BASE_URL` | `http://localhost:3001/api` | URL base da API utilizada pelo frontend. |
 | `BACKEND_PORT` | `3001` | Porta pública da API backend. |
+| `BACKEND_PLATFORM` | `linux/amd64` | Plataforma Docker do backend (recomendado em hosts ARM para compatibilidade do módulo JDBC/Java). |
 | `CORS_ORIGIN` | `http://localhost` | Origem permitida para CORS na API. |
 | `ENCRYPTION_KEY` | `12345678901234567890123456789012` | Chave AES-256-GCM (32 chars) para criptografia de senhas Teradata. |
 | `TERADATA_TIMEOUT_MS` | `30000` | Timeout de conexão/consulta ao Teradata (ms). |

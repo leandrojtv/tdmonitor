@@ -25,6 +25,7 @@ services:
       - td-monitor-network
 
   backend:
+    platform: ${BACKEND_PLATFORM:-linux/amd64}
     build:
       context: ./backend
       dockerfile: Dockerfile
