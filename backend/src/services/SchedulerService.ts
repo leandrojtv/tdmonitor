@@ -1,4 +1,4 @@
-import cron, { ScheduledTask } from 'node-cron';
+import cron from 'node-cron';
 import { AppDataSource } from '../config/database';
 import { ExecutionLog, ReportPanel, Schedule } from '../entities';
 import { cacheService } from './CacheService';
@@ -6,7 +6,7 @@ import { applyMapping, FieldMappings } from './MappingService';
 import { teradataService } from './TeradataService';
 
 export class SchedulerService {
-  private readonly jobs = new Map<string, ScheduledTask>();
+  private readonly jobs = new Map<string, { stop: () => void }>();
 
   async reloadActiveSchedules(): Promise<number> {
     this.stopAll();

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Request, Response, Router } from 'express';
 import connectionsRoutes from './connections.routes';
 import panelsRoutes from './panels.routes';
 import schedulesRoutes from './schedules.routes';
@@ -7,7 +7,7 @@ import logsRoutes from './logs.routes';
 
 const router = Router();
 
-router.get('/health', (_req, res) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {

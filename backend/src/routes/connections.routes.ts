@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { body, param } from 'express-validator';
 import { AppDataSource } from '../config/database';
 import { TeradataConnection } from '../entities';
@@ -19,7 +19,7 @@ const baseValidation = [
   body('jdbcParams').optional().isObject()
 ];
 
-router.post('/', baseValidation, validateRequest, async (req, res) => {
+router.post('/', baseValidation, validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const payload = repo.create({
@@ -40,7 +40,7 @@ router.post('/', baseValidation, validateRequest, async (req, res) => {
   }
 });
 
-router.get('/', async (_req, res) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const items = await repo.find({ order: { createdAt: 'DESC' } });
@@ -52,7 +52,7 @@ router.get('/', async (_req, res) => {
   }
 });
 
-router.get('/:id', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.get('/:id', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const conn = await repo.findOne({ where: { id: req.params.id } });
@@ -70,7 +70,7 @@ router.get('/:id', [param('id').isUUID()], validateRequest, async (req, res) => 
   }
 });
 
-router.put('/:id', [param('id').isUUID(), ...baseValidation], validateRequest, async (req, res) => {
+router.put('/:id', [param('id').isUUID(), ...baseValidation], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const conn = await repo.findOne({ where: { id: req.params.id } });
@@ -99,7 +99,7 @@ router.put('/:id', [param('id').isUUID(), ...baseValidation], validateRequest, a
   }
 });
 
-router.delete('/:id', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.delete('/:id', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const conn = await repo.findOne({ where: { id: req.params.id } });
@@ -117,7 +117,7 @@ router.delete('/:id', [param('id').isUUID()], validateRequest, async (req, res) 
   }
 });
 
-router.post('/:id/test', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.post('/:id/test', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(TeradataConnection);
     const conn = await repo.findOne({ where: { id: req.params.id } });

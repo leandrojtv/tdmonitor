@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { AppDataSource } from '../config/database';
 import { ExecutionLog, ReportPanel } from '../entities';
@@ -32,7 +32,7 @@ async function runPanel(panel: ReportPanel, saveCache: boolean) {
   return { ...result, mapped };
 }
 
-router.get('/', [query('category').optional().isString()], validateRequest, async (req, res) => {
+router.get('/', [query('category').optional().isString()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(ReportPanel);
     const where = req.query.category ? { category: String(req.query.category) } : {};
@@ -44,7 +44,7 @@ router.get('/', [query('category').optional().isString()], validateRequest, asyn
   }
 });
 
-router.get('/:id', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.get('/:id', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(ReportPanel);
     const panel = await repo.findOne({ where: { id: req.params.id } });
@@ -65,7 +65,7 @@ router.put(
   '/:id',
   [param('id').isUUID(), body('sqlQuery').isString().notEmpty(), body('fieldMappings').isObject()],
   validateRequest,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
       const repo = AppDataSource.getRepository(ReportPanel);
       const panel = await repo.findOne({ where: { id: req.params.id } });
@@ -86,7 +86,7 @@ router.put(
   }
 );
 
-router.put('/:id/toggle', [param('id').isUUID(), body('isEnabled').isBoolean()], validateRequest, async (req, res) => {
+router.put('/:id/toggle', [param('id').isUUID(), body('isEnabled').isBoolean()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(ReportPanel);
     const panel = await repo.findOne({ where: { id: req.params.id } });
@@ -105,7 +105,7 @@ router.put('/:id/toggle', [param('id').isUUID(), body('isEnabled').isBoolean()],
   }
 });
 
-router.post('/:id/execute', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.post('/:id/execute', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const panelRepo = AppDataSource.getRepository(ReportPanel);
     const panel = await panelRepo.findOne({ where: { id: req.params.id } });
@@ -127,7 +127,7 @@ router.post('/:id/execute', [param('id').isUUID()], validateRequest, async (req,
   }
 });
 
-router.post('/:id/preview', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.post('/:id/preview', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const panelRepo = AppDataSource.getRepository(ReportPanel);
     const panel = await panelRepo.findOne({ where: { id: req.params.id } });
@@ -145,7 +145,7 @@ router.post('/:id/preview', [param('id').isUUID()], validateRequest, async (req,
   }
 });
 
-router.get('/:id/data', [param('id').isUUID()], validateRequest, async (req, res) => {
+router.get('/:id/data', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const cache = await cacheService.getCache(req.params.id);
 
@@ -161,7 +161,7 @@ router.get('/:id/data', [param('id').isUUID()], validateRequest, async (req, res
   }
 });
 
-router.post('/:id/validate-sql', [param('id').isUUID(), body('sql').isString().notEmpty()], validateRequest, async (req, res) => {
+router.post('/:id/validate-sql', [param('id').isUUID(), body('sql').isString().notEmpty()], validateRequest, async (req: Request, res: Response) => {
   try {
     const panelRepo = AppDataSource.getRepository(ReportPanel);
     const panel = await panelRepo.findOne({ where: { id: req.params.id } });

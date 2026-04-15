@@ -49,7 +49,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export class TeradataService {
-  private jdbc?: JDBC;
+  private jdbc?: any;
   private readonly timeoutMs: number;
 
   constructor(timeoutMs = env.teradataTimeoutMs) {
@@ -72,7 +72,7 @@ export class TeradataService {
   }
 
   async connect(connectionConfig: ConnectionConfig): Promise<void> {
-    const jdbc = new JDBC({
+    const jdbc = new (JDBC as any)({
       url: this.buildJdbcUrl(connectionConfig),
       drivername: env.teradata.driverClass,
       minpoolsize: 1,
@@ -85,7 +85,7 @@ export class TeradataService {
 
     await withTimeout(
       new Promise<void>((resolve, reject) => {
-        jdbc.initialize((error) => {
+        jdbc.initialize((error: unknown) => {
           if (error) {
             reject(new Error(parseErrorMessage(error)));
             return;
@@ -155,7 +155,7 @@ export class TeradataService {
 
     const connection = await withTimeout(
       new Promise<any>((resolve, reject) => {
-        this.jdbc?.reserve((error, connObj) => {
+        this.jdbc?.reserve((error: unknown, connObj: unknown) => {
           if (error) {
             reject(error);
             return;
