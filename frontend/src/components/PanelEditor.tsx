@@ -58,6 +58,8 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [validateMessage, setValidateMessage] = useState<string | null>(null);
+  const [previewAt, setPreviewAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!panel) return;
@@ -68,6 +70,8 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
     setRawPreview([]);
     setDurationMs(0);
     setHasChanges(false);
+    setValidateMessage(null);
+    setPreviewAt(null);
   }, [panel]);
 
   const lineNumbers = useMemo(() => sqlQuery.split('\n').map((_, i) => i + 1).join('\n'), [sqlQuery]);
@@ -79,8 +83,13 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   async function handleValidate() {
     setLoading(true);
     try {
-      await api.post(`/panels/${currentPanel.id}/validate-sql`, { sql: sqlQuery });
+      const response = await api.post(`/panels/${currentPanel.id}/validate-sql`, { sql: sqlQuery });
+      const message = response.data?.message ?? response.data?.data?.message ?? 'SQL válido';
+      setValidateMessage(String(message));
       toast.success('SQL válido');
+    } catch (error) {
+      setValidateMessage(`Falha na validação: ${String(error)}`);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -93,6 +102,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
       const data = response.data.data;
       setRawPreview(data.rows ?? []);
       setDurationMs(data.duration_ms ?? 0);
+      setPreviewAt(new Date());
       setTab('preview');
     } finally {
       setLoading(false);
@@ -194,6 +204,9 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
               <button className="btn-editor" onClick={handlePreview}><PlayCircle size={14} /> Preview (Top 10)</button>
               <span className="ml-auto text-xs text-slate-400">{sqlQuery.length} caracteres</span>
             </div>
+            {validateMessage && (
+              <p className="rounded-md border border-[var(--teal)]/30 bg-[var(--teal)]/10 px-3 py-2 text-xs text-[var(--teal)]">{validateMessage}</p>
+            )}
 
             <div className="relative grid grid-cols-[48px_1fr] rounded-md border border-white/10 bg-[#0a0e14]">
               <pre className="m-0 border-r border-white/10 p-3 text-right text-xs text-slate-500">{lineNumbers}</pre>
@@ -232,6 +245,11 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
                 <option value="kpi">kpi · cards KPI</option>
               </select>
             </label>
+            <div className="grid gap-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-300 md:grid-cols-3">
+              <p><strong>single_row:</strong> resumo de uma linha em card.</p>
+              <p><strong>table:</strong> lista de linhas em tabela paginável.</p>
+              <p><strong>kpi:</strong> métricas chave em StatCards.</p>
+            </div>
 
             <button className="btn-editor" onClick={autoDetectFields}><Wand2 size={14} /> Auto-detectar Campos</button>
 
@@ -308,13 +326,15 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
         {tab === 'preview' && (
           <div className="space-y-4 rounded-xl border border-white/10 bg-[#101722] p-4">
             <button className="btn-editor" onClick={handlePreview}><PlayCircle size={14} /> Executar Preview</button>
-            <p className="text-xs text-slate-400">Duração: {durationMs}ms · Linhas: {rawPreview.length} · {new Date().toLocaleString()}</p>
+            <p className="text-xs text-slate-400">
+              Duração: {durationMs}ms · Linhas: {rawPreview.length} · {previewAt ? previewAt.toLocaleString() : '—'}
+            </p>
 
             {resultType === 'kpi' && (
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {Object.entries(mappedRows[0] ?? {}).map(([k, v]) => (
                   <div key={k} className="rounded-lg border border-[var(--teal)]/30 bg-[#0f1520] p-3">
-                    <p className="text-xs text-slate-400">{k}</p>
+                    <p className="text-xs text-slate-400">{mappings.find((m) => m.target_field === k)?.label || k}</p>
                     <p className="font-mono text-lg text-[var(--teal)]">{String(v)}</p>
                   </div>
                 ))}
@@ -325,7 +345,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
               <div className="rounded-lg border border-white/10 bg-[#0f1520] p-4 text-sm">
                 {Object.entries(mappedRows[0] ?? {}).map(([k, v]) => (
                   <div key={k} className="flex justify-between border-b border-white/5 py-1">
-                    <span className="text-slate-400">{k}</span>
+                    <span className="text-slate-400">{mappings.find((m) => m.target_field === k)?.label || k}</span>
                     <span className="font-mono">{String(v)}</span>
                   </div>
                 ))}
@@ -335,7 +355,13 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
             {resultType === 'table' && (
               <div className="overflow-x-auto rounded-lg border border-white/10">
                 <table className="min-w-full text-xs">
-                  <thead><tr>{Object.keys(mappedRows[0] ?? {}).map((k) => <th key={k} className="p-2 text-left text-slate-400">{k}</th>)}</tr></thead>
+                  <thead>
+                    <tr>
+                      {Object.keys(mappedRows[0] ?? {}).map((k) => (
+                        <th key={k} className="p-2 text-left text-slate-400">{mappings.find((m) => m.target_field === k)?.label || k}</th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     {mappedRows.map((row, idx) => (
                       <tr key={idx} className="border-t border-white/5">

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ComponentType } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, Database, Lock, PanelTop, PlayCircle, Search, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, Lock, PanelTop, PlayCircle, Search, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PanelEditor } from '../components/PanelEditor';
 import { apiService } from '../services/api';
@@ -61,12 +61,27 @@ export function PanelsPage() {
   }, [filter, panelsQuery.data, search]);
 
   const executions = useMemo(() => {
-    const map: Record<string, { executedAt: string | null }> = {};
+    const map: Record<string, { executedAt: string | null; status: 'ok' | 'stale' | 'never' }> = {};
     Object.values(dashboardQuery.data ?? {}).flat().forEach((entry) => {
-      map[entry.panelId] = { executedAt: entry.executedAt };
+      if (!entry.executedAt) {
+        map[entry.panelId] = { executedAt: null, status: 'never' };
+        return;
+      }
+      const ageMin = (Date.now() - new Date(entry.executedAt).getTime()) / 60000;
+      map[entry.panelId] = { executedAt: entry.executedAt, status: ageMin <= 60 ? 'ok' : 'stale' };
     });
     return map;
   }, [dashboardQuery.data]);
+
+  function relativeExecution(executedAt: string | null) {
+    if (!executedAt) return 'Nunca';
+    const minutes = Math.max(1, Math.floor((Date.now() - new Date(executedAt).getTime()) / 60000));
+    if (minutes < 60) return `${minutes} min atrás`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h atrás`;
+    const days = Math.floor(hours / 24);
+    return `${days}d atrás`;
+  }
 
   return (
     <div className="space-y-4">
@@ -101,18 +116,31 @@ export function PanelsPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {panels.map((panel) => {
                 const exec = executions[panel.id];
+                const statusInfo = exec?.status ?? 'never';
+                const statusBadge = statusInfo === 'ok'
+                  ? { text: 'OK', cls: 'text-[var(--green)]', Icon: CheckCircle2 }
+                  : statusInfo === 'stale'
+                    ? { text: 'Atrasado', cls: 'text-[var(--amber)]', Icon: Clock3 }
+                    : { text: 'Sem execução', cls: 'text-[var(--red)]', Icon: AlertTriangle };
+                const StatusIcon = statusBadge.Icon;
                 return (
                   <article key={panel.id} className="rounded-xl border border-white/10 bg-[#0f1520] p-4">
                     <div className="mb-2 flex items-start justify-between">
-                      <div>
+                      <div className="flex items-start gap-2">
+                        <Icon size={16} className="mt-0.5 text-[var(--teal)]" />
+                        <div>
                         <p className="font-mono text-xs text-[var(--teal)]">{panel.panelKey}</p>
                         <h4 className="text-sm text-white">{panel.displayName}</h4>
+                        </div>
                       </div>
                       <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase text-slate-300">{panel.fieldMappings.result_type}</span>
                     </div>
 
                     <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
-                      <span>Última execução: {exec?.executedAt ? `${Math.max(1, Math.floor((Date.now() - new Date(exec.executedAt).getTime()) / 60000))} min` : 'Nunca'}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <StatusIcon size={13} className={statusBadge.cls} />
+                        {statusBadge.text} · Última execução: {relativeExecution(exec?.executedAt ?? null)}
+                      </span>
                       <button
                         onClick={() => toggleMutation.mutate({ id: panel.id, isEnabled: !panel.isEnabled })}
                         className={panel.isEnabled ? 'text-[var(--green)]' : 'text-slate-500'}
@@ -126,7 +154,7 @@ export function PanelsPage() {
                       <button className="btn-mini" onClick={() => executeMutation.mutate(panel.id)}><PlayCircle size={14} /> Executar Agora</button>
                       <button className="btn-mini" onClick={async () => {
                         await apiService.previewPanel(panel.id);
-                        toast.success('Preview executado');
+                        toast.success('Preview executado (Top 10)');
                       }}>Preview</button>
                     </div>
                   </article>
