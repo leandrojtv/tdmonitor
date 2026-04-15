@@ -44,6 +44,60 @@ router.get('/', [query('category').optional().isString()], validateRequest, asyn
   }
 });
 
+router.post(
+  '/',
+  [
+    body('connectionId').isUUID(),
+    body('panelKey').isString().isLength({ min: 2, max: 50 }),
+    body('displayName').isString().isLength({ min: 2, max: 150 }),
+    body('category').isString().isLength({ min: 2, max: 50 }),
+    body('description').optional({ nullable: true }).isString(),
+    body('sqlQuery').optional().isString(),
+    body('fieldMappings').optional().isObject(),
+    body('executionOrder').optional().isInt({ min: 0 })
+  ],
+  validateRequest,
+  async (req: Request, res: Response) => {
+    try {
+      const repo = AppDataSource.getRepository(ReportPanel);
+
+      const payload = repo.create({
+        connectionId: req.body.connectionId,
+        panelKey: req.body.panelKey,
+        displayName: req.body.displayName,
+        category: req.body.category,
+        description: req.body.description ?? null,
+        sqlQuery: req.body.sqlQuery ?? 'SELECT 1 AS value;',
+        fieldMappings: req.body.fieldMappings ?? {
+          result_type: 'single_row',
+          mappings: [
+            {
+              source_column: 'value',
+              target_field: 'value',
+              data_type: 'number',
+              format: 'integer',
+              label: 'Value'
+            }
+          ]
+        },
+        isEnabled: true,
+        executionOrder: req.body.executionOrder ?? 0
+      });
+
+      const saved = await repo.save(payload);
+      res.status(201).json(ok(saved, 'Painel criado com sucesso'));
+    } catch (error) {
+      const message = String(error);
+      if (message.includes('duplicate key') || message.includes('already exists')) {
+        res.status(409).json(fail('Conflict', 'panel_key já existe'));
+        return;
+      }
+      console.error(new Date().toISOString(), error);
+      res.status(500).json(fail('InternalServerError', 'Erro ao criar painel'));
+    }
+  }
+);
+
 router.get('/:id', [param('id').isUUID()], validateRequest, async (req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(ReportPanel);

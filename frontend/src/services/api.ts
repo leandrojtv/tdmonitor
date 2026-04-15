@@ -40,6 +40,10 @@ export const apiService = {
   testConnection: (id: string) => unwrap<{ success: boolean; message: string; latencyMs: number }>(api.post(`/connections/${id}/test`)),
 
   getPanels: (category?: string) => unwrap<PanelDefinition[]>(api.get('/panels', { params: { category } })),
+  createPanel: (
+    payload: Pick<PanelDefinition, 'connectionId' | 'panelKey' | 'displayName' | 'category'> &
+      Partial<Pick<PanelDefinition, 'description' | 'sqlQuery' | 'fieldMappings' | 'executionOrder'>>
+  ) => unwrap<PanelDefinition>(api.post('/panels', payload)),
   getPanel: (id: string) => unwrap<PanelDefinition>(api.get(`/panels/${id}`)),
   updatePanel: (id: string, payload: Pick<PanelDefinition, 'sqlQuery' | 'fieldMappings'>) =>
     unwrap<PanelDefinition>(api.put(`/panels/${id}`, payload)),

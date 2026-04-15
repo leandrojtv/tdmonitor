@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, Lock, PanelTop, PlayCircle, Search, Shield, ToggleLeft, ToggleRight, type LucideIcon } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, Lock, PanelTop, PlayCircle, Plus, Search, Shield, ToggleLeft, ToggleRight, type LucideIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PanelEditor } from '../components/PanelEditor';
 import { apiService } from '../services/api';
@@ -29,6 +29,7 @@ export function PanelsPage() {
   const [editing, setEditing] = useState<PanelDefinition | null>(null);
 
   const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: () => apiService.getPanels() });
+  const connectionsQuery = useQuery({ queryKey: ['connections'], queryFn: apiService.getConnections });
   const dashboardQuery = useQuery({ queryKey: ['dashboard-data'], queryFn: apiService.getDashboardData });
 
   const toggleMutation = useMutation({
@@ -41,6 +42,16 @@ export function PanelsPage() {
     onSuccess: () => {
       toast.success('Painel executado');
       queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: Pick<PanelDefinition, 'connectionId' | 'panelKey' | 'displayName' | 'category'>) =>
+      apiService.createPanel(payload),
+    onSuccess: (panel) => {
+      toast.success('Painel criado');
+      queryClient.invalidateQueries({ queryKey: ['panels'] });
+      setEditing(panel);
     }
   });
 
@@ -85,6 +96,28 @@ export function PanelsPage() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Configuração de Painéis</h2>
+        <button
+          className="btn-primary"
+          onClick={() => {
+            const connectionId = connectionsQuery.data?.[0]?.id;
+            if (!connectionId) {
+              toast.error('Crie uma conexão primeiro em Configurações > Conexões');
+              return;
+            }
+            const panelKey = window.prompt('panel_key (ex.: storage_usage)')?.trim();
+            if (!panelKey) return;
+            const displayName = window.prompt('Nome de exibição do painel')?.trim();
+            if (!displayName) return;
+            const category = window.prompt('Categoria (storage/performance/security/sessions/access)', 'storage')?.trim() || 'storage';
+            createMutation.mutate({ connectionId, panelKey, displayName, category });
+          }}
+        >
+          <Plus size={14} /> Novo Painel
+        </button>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-2">
           {['all', 'storage', 'performance', 'security', 'sessions', 'access'].map((c) => (
@@ -107,6 +140,12 @@ export function PanelsPage() {
           />
         </div>
       </div>
+
+      {Object.keys(grouped).length === 0 && (
+        <div className="rounded-xl border border-dashed border-white/20 p-8 text-center text-sm text-slate-300">
+          Nenhum painel encontrado para os filtros atuais. Use <strong>Novo Painel</strong> para criar o primeiro.
+        </div>
+      )}
 
       {Object.entries(grouped).map(([category, panels]) => {
         const Icon = categoryIcons[category] ?? PanelTop;
