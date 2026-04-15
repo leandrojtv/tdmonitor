@@ -1,6 +1,6 @@
-import { useMemo, useState, type ComponentType } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, Lock, PanelTop, PlayCircle, Search, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, Lock, PanelTop, PlayCircle, Search, Shield, ToggleLeft, ToggleRight, type LucideIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PanelEditor } from '../components/PanelEditor';
 import { apiService } from '../services/api';
@@ -14,7 +14,7 @@ const categoryLabels: Record<string, string> = {
   access: 'Acesso'
 };
 
-const categoryIcons: Record<string, ComponentType<{ size?: string | number }>> = {
+const categoryIcons: Record<string, LucideIcon> = {
   storage: Database,
   performance: Activity,
   security: Shield,
