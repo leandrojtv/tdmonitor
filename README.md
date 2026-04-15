@@ -109,6 +109,27 @@ td-monitor/
 ## Painéis Pré-configurados
 > Os painéis abaixo já são incluídos no `database/seed.sql` com queries placeholder (`Query X.Y`) para você substituir pelo SQL oficial do seu ambiente.
 
+### Lista rápida de `panel_key` possíveis
+```text
+system_disk_total
+disk_by_database
+disk_forecast
+underutilized_databases
+top_skew
+high_cpu_queries
+failed_logins
+brute_force
+inactive_users
+access_by_database_rights
+database_query_activity
+critical_db_activity
+active_sessions
+sessions_by_user
+logon_pattern
+query_status
+permission_analysis
+```
+
 | # | Painel (`panel_key`) | Categoria | Query de referência |
 |---|---|---|---|
 | 1 | `system_disk_total` | `storage` | Query 1.1 |
