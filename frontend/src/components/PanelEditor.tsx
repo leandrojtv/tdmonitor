@@ -51,7 +51,7 @@ function mapPreviewRows(rows: Record<string, unknown>[], mappings: PanelFieldMap
 export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   const [tab, setTab] = useState<Tab>('sql');
   const [sqlQuery, setSqlQuery] = useState('');
-  const [resultType, setResultType] = useState<'single_row' | 'table' | 'kpi'>('table');
+  const [resultType, setResultType] = useState<'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart'>('table');
   const [mappings, setMappings] = useState<PanelFieldMapping[]>([]);
   const [rawPreview, setRawPreview] = useState<Record<string, unknown>[]>([]);
   const [durationMs, setDurationMs] = useState(0);
@@ -243,12 +243,16 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
                 <option value="single_row">single_row · resumo em card</option>
                 <option value="table">table · tabela</option>
                 <option value="kpi">kpi · cards KPI</option>
+                <option value="bar_chart">bar_chart · gráfico de barras</option>
+                <option value="line_chart">line_chart · gráfico de linhas</option>
               </select>
             </label>
-            <div className="grid gap-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-300 md:grid-cols-3">
+            <div className="grid gap-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-300 md:grid-cols-5">
               <p><strong>single_row:</strong> resumo de uma linha em card.</p>
               <p><strong>table:</strong> lista de linhas em tabela paginável.</p>
               <p><strong>kpi:</strong> métricas chave em StatCards.</p>
+              <p><strong>bar_chart:</strong> comparação visual por categoria.</p>
+              <p><strong>line_chart:</strong> evolução temporal/série.</p>
             </div>
 
             <button className="btn-editor" onClick={autoDetectFields}><Wand2 size={14} /> Auto-detectar Campos</button>
@@ -370,6 +374,50 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {resultType === 'bar_chart' && (
+              <div className="space-y-2 rounded-lg border border-white/10 bg-[#0f1520] p-4">
+                {(mappedRows.slice(0, 8)).map((row, idx) => {
+                  const [x, y] = Object.values(row);
+                  const value = typeof y === 'number' ? y : Number(y ?? 0);
+                  const width = Math.max(2, Math.min(100, value));
+                  return (
+                    <div key={idx}>
+                      <div className="mb-1 flex justify-between text-xs text-slate-300">
+                        <span>{String(x ?? `Item ${idx + 1}`)}</span>
+                        <span>{Number.isFinite(value) ? value : 0}</span>
+                      </div>
+                      <div className="h-2 rounded bg-white/10">
+                        <div className="h-2 rounded bg-[var(--teal)]" style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {resultType === 'line_chart' && (
+              <div className="rounded-lg border border-white/10 bg-[#0f1520] p-4">
+                <svg viewBox="0 0 320 120" className="h-40 w-full">
+                  <polyline
+                    fill="none"
+                    stroke="var(--teal)"
+                    strokeWidth="2"
+                    points={mappedRows
+                      .slice(0, 12)
+                      .map((row, idx) => {
+                        const y = Number(Object.values(row)[1] ?? 0);
+                        const safeY = Number.isFinite(y) ? y : 0;
+                        const xPos = 10 + idx * 25;
+                        const yPos = 110 - Math.max(0, Math.min(100, safeY));
+                        return `${xPos},${yPos}`;
+                      })
+                      .join(' ')}
+                  />
+                </svg>
+                <p className="mt-2 text-xs text-slate-400">Pré-visualização simplificada da série (primeiros 12 pontos).</p>
               </div>
             )}
 

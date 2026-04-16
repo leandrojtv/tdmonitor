@@ -15,7 +15,7 @@ export type PanelDefinition = {
   description: string | null;
   sqlQuery: string;
   fieldMappings: {
-    result_type: 'single_row' | 'table' | 'kpi';
+    result_type: 'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart';
     mappings: PanelFieldMapping[];
   };
   isEnabled: boolean;

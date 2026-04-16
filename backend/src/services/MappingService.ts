@@ -7,7 +7,7 @@ export type MappingItem = {
 };
 
 export type FieldMappings = {
-  result_type?: 'single_row' | 'table' | 'kpi';
+  result_type?: 'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart';
   mappings?: MappingItem[];
 };
 

@@ -3,7 +3,7 @@ export type DashboardPanelData = {
   panelKey: string;
   displayName: string;
   data: {
-    result_type?: 'single_row' | 'table' | 'kpi';
+    result_type?: 'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart';
     columns?: Array<{ label: string; target_field: string }>;
     rows?: Record<string, unknown>[];
   } | null;

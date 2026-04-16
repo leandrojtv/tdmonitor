@@ -95,6 +95,99 @@ export function DashboardPage() {
 
   const isEmpty = !dashboardQuery.isLoading && panelList.length === 0;
 
+  function renderPanelContent(panel: (typeof panelList)[number]) {
+    const resultType = panel.data?.result_type ?? 'table';
+    const rows = panel.data?.rows ?? [];
+
+    if (resultType === 'kpi') {
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(rows[0] ?? {}).map(([k, v]) => (
+            <div key={k} className="rounded bg-white/5 p-2">
+              <p className="text-[10px] text-slate-400">{k}</p>
+              <p className="font-mono text-sm text-[var(--teal)]">{String(v)}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (resultType === 'single_row') {
+      return (
+        <div className="space-y-1 text-xs">
+          {Object.entries(rows[0] ?? {}).map(([k, v]) => (
+            <div key={k} className="flex justify-between rounded bg-white/5 px-2 py-1">
+              <span className="text-slate-400">{k}</span>
+              <span className="font-mono">{String(v)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (resultType === 'bar_chart') {
+      return (
+        <div className="space-y-2">
+          {rows.slice(0, 8).map((row, idx) => {
+            const [x, y] = Object.values(row);
+            const value = Number(y ?? 0);
+            const width = Math.max(4, Math.min(100, Number.isFinite(value) ? value : 0));
+            return (
+              <div key={idx}>
+                <div className="mb-1 flex justify-between text-[11px] text-slate-300">
+                  <span>{String(x ?? `Item ${idx + 1}`)}</span>
+                  <span>{Number.isFinite(value) ? value : 0}</span>
+                </div>
+                <div className="h-2 rounded bg-white/10">
+                  <div className="h-2 rounded bg-[var(--teal)]" style={{ width: `${width}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (resultType === 'line_chart') {
+      const points = rows.slice(0, 12)
+        .map((row, idx) => {
+          const value = Number(Object.values(row)[1] ?? 0);
+          const y = Number.isFinite(value) ? value : 0;
+          return `${10 + idx * 25},${110 - Math.max(0, Math.min(100, y))}`;
+        })
+        .join(' ');
+
+      return (
+        <svg viewBox="0 0 320 120" className="h-24 w-full">
+          <polyline fill="none" stroke="var(--teal)" strokeWidth="2" points={points} />
+        </svg>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-md border border-white/10">
+        <table className="min-w-full text-xs">
+          <thead>
+            <tr>
+              {Object.keys(rows[0] ?? {}).map((k) => (
+                <th key={k} className="px-2 py-1 text-left text-slate-400">{k}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, 5).map((row, idx) => (
+              <tr key={idx} className="border-t border-white/5">
+                {Object.entries(row).map(([k, v]) => (
+                  <td key={k} className="px-2 py-1 font-mono">{String(v)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -158,16 +251,7 @@ export function DashboardPage() {
               </div>
 
               <div className="space-y-2 font-mono text-xs text-slate-300">
-                {(panel.data?.rows ?? []).slice(0, 3).map((row, idx) => (
-                  <div key={idx} className="rounded-md bg-white/5 p-2 hover:bg-white/10">
-                    {Object.entries(row).slice(0, 2).map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between gap-2">
-                        <span className="text-slate-400">{k}</span>
-                        <span className="truncate">{String(v)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+                {renderPanelContent(panel)}
               </div>
             </article>
           ))}
