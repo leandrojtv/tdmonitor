@@ -4,7 +4,7 @@ import { BarChart3, LineChart, RefreshCw, Table2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiService } from '../services/api';
 import { DashboardPanelData } from '../types/dashboard';
-import { PanelResultType, PanelWidgetConfig } from '../types/panel';
+import { PanelDefinition, PanelResultType, PanelWidgetConfig } from '../types/panel';
 
 const tabs = ['overview', 'storage', 'performance', 'security', 'sessions', 'access'] as const;
 type TabKey = (typeof tabs)[number];
@@ -173,6 +173,7 @@ export function DashboardPage() {
 
   const dashboardQuery = useQuery({ queryKey: ['dashboard-data'], queryFn: apiService.getDashboardData, refetchInterval: 60000 });
   const scheduleQuery = useQuery({ queryKey: ['schedules'], queryFn: apiService.getSchedules });
+  const panelsQuery = useQuery({ queryKey: ['panels'], queryFn: () => apiService.getPanels() });
 
   useEffect(() => {
     if (dashboardQuery.data) {
@@ -200,8 +201,26 @@ export function DashboardPage() {
 
   const panelList = useMemo(() => {
     const data = dashboardQuery.data ?? {};
-    return categoryMap[activeTab].flatMap((c) => data[c] ?? []);
-  }, [activeTab, dashboardQuery.data]);
+    const catalog = new Map<string, PanelDefinition>((panelsQuery.data ?? []).map((p) => [p.id, p]));
+
+    return categoryMap[activeTab].flatMap((c) => (data[c] ?? []).map((cached) => {
+      const latest = catalog.get(cached.panelId);
+      if (!latest) return cached;
+      return {
+        ...cached,
+        displayName: latest.displayName,
+        panelKey: latest.panelKey,
+        data: {
+          ...(cached.data ?? {}),
+          result_type: latest.fieldMappings?.result_type ?? cached.data?.result_type ?? 'table',
+          widget: {
+            ...(cached.data?.widget ?? {}),
+            ...(latest.fieldMappings?.widget ?? {})
+          }
+        }
+      };
+    }));
+  }, [activeTab, dashboardQuery.data, panelsQuery.data]);
 
   const lastExecuted = useMemo(() => {
     const dates = Object.values(dashboardQuery.data ?? {})
@@ -245,6 +264,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-dashed border-white/20 p-12 text-center">
           <p className="text-lg font-semibold text-white">Nenhum dado disponível</p>
           <p className="mt-2 text-sm text-slate-400">Configure conexão, painéis e execute um agendamento.</p>
+          <p className="mt-1 text-xs text-slate-500">Dica: após mudar SQL/mapeamento, use “Salvar e Executar” no painel para atualizar cache.</p>
         </div>
       )}
 
