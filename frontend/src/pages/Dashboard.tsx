@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { BarChart3, LineChart, RefreshCw, Table2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiService } from '../services/api';
+import { DashboardPanelData } from '../types/dashboard';
+import { PanelResultType, PanelWidgetConfig } from '../types/panel';
 
 const tabs = ['overview', 'storage', 'performance', 'security', 'sessions', 'access'] as const;
-
 type TabKey = (typeof tabs)[number];
 
 const tabLabels: Record<TabKey, string> = {
@@ -26,19 +27,152 @@ const categoryMap: Record<TabKey, string[]> = {
   access: ['access']
 };
 
+function formatCell(value: unknown): string {
+  if (value === null || value === undefined) return '-';
+  if (typeof value === 'number') return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  return String(value);
+}
+
+function normalizeWidget(resultType: PanelResultType, widget?: PanelWidgetConfig) {
+  const defaults: Record<PanelResultType, { col: 3 | 4 | 6 | 8 | 12; row: 1 | 2 | 3; minHeight: number }> = {
+    kpi: { col: 4, row: 1, minHeight: 250 },
+    single_row: { col: 4, row: 1, minHeight: 250 },
+    table: { col: 6, row: 2, minHeight: 320 },
+    bar_chart: { col: 6, row: 2, minHeight: 320 },
+    line_chart: { col: 6, row: 2, minHeight: 320 }
+  };
+
+  const base = defaults[resultType];
+  return {
+    col: widget?.col_span ?? base.col,
+    row: widget?.row_span ?? base.row,
+    minHeight: widget?.min_height ?? base.minHeight,
+    showHeader: widget?.show_header ?? true,
+    showLegend: widget?.show_legend ?? true,
+    showTable: widget?.show_table ?? false,
+    color: widget?.color ?? 'var(--teal)',
+    xField: widget?.x_field,
+    yField: widget?.y_field
+  };
+}
+
+function firstNumericKey(row: Record<string, unknown>) {
+  return Object.keys(row).find((k) => typeof row[k] === 'number') ?? Object.keys(row)[1];
+}
+
+function PanelVisualization({ panel }: { panel: DashboardPanelData }) {
+  const resultType = (panel.data?.result_type ?? 'table') as PanelResultType;
+  const rows = panel.data?.rows ?? [];
+  const columns = panel.data?.columns ?? [];
+  const cfg = normalizeWidget(resultType, panel.data?.widget);
+
+  if (!rows.length) {
+    return <div className="rounded-lg border border-dashed border-white/15 p-6 text-center text-sm text-slate-400">Sem dados nesta execução.</div>;
+  }
+
+  if (resultType === 'kpi') {
+    const row = rows[0] ?? {};
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {Object.entries(row).map(([key, value]) => (
+          <div key={key} className="rounded-lg border border-white/10 bg-white/5 p-3">
+            <p className="text-[11px] text-slate-400">{columns.find((c) => c.target_field === key)?.label ?? key}</p>
+            <p className="mt-1 font-mono text-lg text-[var(--teal)]">{formatCell(value)}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (resultType === 'single_row') {
+    const row = rows[0] ?? {};
+    return (
+      <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-3">
+        {Object.entries(row).map(([key, value]) => (
+          <div key={key} className="flex items-center justify-between border-b border-white/10 py-1.5 text-sm last:border-0">
+            <span className="text-slate-400">{columns.find((c) => c.target_field === key)?.label ?? key}</span>
+            <span className="font-mono text-slate-100">{formatCell(value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (resultType === 'bar_chart') {
+    const xKey = cfg.xField ?? Object.keys(rows[0])[0];
+    const yKey = cfg.yField ?? firstNumericKey(rows[0]);
+    const values = rows.map((r) => Number(r[yKey] ?? 0));
+    const max = Math.max(1, ...values.filter((v) => Number.isFinite(v)));
+
+    return (
+      <div className="space-y-2">
+        {cfg.showLegend && <div className="text-xs text-slate-400">{xKey} × {yKey}</div>}
+        {rows.slice(0, 10).map((row, idx) => {
+          const value = Number(row[yKey] ?? 0);
+          const width = Math.max(3, (value / max) * 100);
+          return (
+            <div key={idx}>
+              <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+                <span className="truncate pr-2">{formatCell(row[xKey])}</span>
+                <span className="font-mono">{formatCell(value)}</span>
+              </div>
+              <div className="h-2 rounded bg-white/10">
+                <div className="h-2 rounded" style={{ width: `${width}%`, backgroundColor: cfg.color }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (resultType === 'line_chart') {
+    const xKey = cfg.xField ?? Object.keys(rows[0])[0];
+    const yKey = cfg.yField ?? firstNumericKey(rows[0]);
+    const values = rows.slice(0, 20).map((row) => Number(row[yKey] ?? 0));
+    const max = Math.max(1, ...values.filter((v) => Number.isFinite(v)));
+    const points = values.map((v, i) => `${12 + i * (296 / Math.max(1, values.length - 1))},${108 - ((v / max) * 92)}`).join(' ');
+
+    return (
+      <div>
+        {cfg.showLegend && <div className="mb-2 text-xs text-slate-400">{xKey} × {yKey}</div>}
+        <svg viewBox="0 0 320 120" className="h-36 w-full rounded bg-[#0a0e14] p-2">
+          <path d="M10 108 L310 108" stroke="rgba(148,163,184,.3)" strokeWidth="1" />
+          <polyline points={points} fill="none" stroke={cfg.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-white/10">
+      <table className="min-w-full text-xs">
+        <thead>
+          <tr>
+            {Object.keys(rows[0] ?? {}).map((k) => (
+              <th key={k} className="px-3 py-2 text-left text-slate-400">{columns.find((c) => c.target_field === k)?.label ?? k}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, 12).map((row, idx) => (
+            <tr key={idx} className="border-t border-white/5 hover:bg-white/5">
+              {Object.entries(row).map(([k, value]) => (
+                <td key={k} className="px-3 py-2 font-mono text-slate-200">{formatCell(value)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const dashboardQuery = useQuery({
-    queryKey: ['dashboard-data'],
-    queryFn: apiService.getDashboardData,
-    refetchInterval: 60000
-  });
-
-  const scheduleQuery = useQuery({
-    queryKey: ['schedules'],
-    queryFn: apiService.getSchedules
-  });
+  const dashboardQuery = useQuery({ queryKey: ['dashboard-data'], queryFn: apiService.getDashboardData, refetchInterval: 60000 });
+  const scheduleQuery = useQuery({ queryKey: ['schedules'], queryFn: apiService.getSchedules });
 
   useEffect(() => {
     if (dashboardQuery.data) {
@@ -51,17 +185,12 @@ export function DashboardPage() {
     const handler = async () => {
       try {
         const firstActiveSchedule = scheduleQuery.data?.find((s) => s.isEnabled);
-
-        if (!firstActiveSchedule) {
-          toast.error('Nenhum schedule ativo encontrado.');
-          return;
-        }
-
+        if (!firstActiveSchedule) return toast.error('Nenhum schedule ativo encontrado.');
         await apiService.runSchedule(firstActiveSchedule.id);
-        toast.success('Schedule executado com sucesso.');
+        toast.success('Dashboard atualizado');
         dashboardQuery.refetch();
       } catch {
-        // erro tratado no interceptor
+        // handled by interceptor
       }
     };
 
@@ -71,18 +200,15 @@ export function DashboardPage() {
 
   const panelList = useMemo(() => {
     const data = dashboardQuery.data ?? {};
-    const categories = categoryMap[activeTab];
-    return categories.flatMap((category) => data[category] ?? []);
+    return categoryMap[activeTab].flatMap((c) => data[c] ?? []);
   }, [activeTab, dashboardQuery.data]);
 
   const lastExecuted = useMemo(() => {
-    const all = Object.values(dashboardQuery.data ?? {}).flat();
-    const dates = all
+    const dates = Object.values(dashboardQuery.data ?? {})
+      .flat()
       .map((item) => (item.executedAt ? new Date(item.executedAt).getTime() : 0))
       .filter((v) => v > 0);
-
-    if (!dates.length) return null;
-    return new Date(Math.max(...dates));
+    return dates.length ? new Date(Math.max(...dates)) : null;
   }, [dashboardQuery.data]);
 
   const statusColor = useMemo(() => {
@@ -93,168 +219,70 @@ export function DashboardPage() {
     return 'bg-[#f87171]';
   }, [lastExecuted]);
 
-  const isEmpty = !dashboardQuery.isLoading && panelList.length === 0;
-
-  function renderPanelContent(panel: (typeof panelList)[number]) {
-    const resultType = panel.data?.result_type ?? 'table';
-    const rows = panel.data?.rows ?? [];
-
-    if (resultType === 'kpi') {
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(rows[0] ?? {}).map(([k, v]) => (
-            <div key={k} className="rounded bg-white/5 p-2">
-              <p className="text-[10px] text-slate-400">{k}</p>
-              <p className="font-mono text-sm text-[var(--teal)]">{String(v)}</p>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (resultType === 'single_row') {
-      return (
-        <div className="space-y-1 text-xs">
-          {Object.entries(rows[0] ?? {}).map(([k, v]) => (
-            <div key={k} className="flex justify-between rounded bg-white/5 px-2 py-1">
-              <span className="text-slate-400">{k}</span>
-              <span className="font-mono">{String(v)}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (resultType === 'bar_chart') {
-      return (
-        <div className="space-y-2">
-          {rows.slice(0, 8).map((row, idx) => {
-            const [x, y] = Object.values(row);
-            const value = Number(y ?? 0);
-            const width = Math.max(4, Math.min(100, Number.isFinite(value) ? value : 0));
-            return (
-              <div key={idx}>
-                <div className="mb-1 flex justify-between text-[11px] text-slate-300">
-                  <span>{String(x ?? `Item ${idx + 1}`)}</span>
-                  <span>{Number.isFinite(value) ? value : 0}</span>
-                </div>
-                <div className="h-2 rounded bg-white/10">
-                  <div className="h-2 rounded bg-[var(--teal)]" style={{ width: `${width}%` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    if (resultType === 'line_chart') {
-      const points = rows.slice(0, 12)
-        .map((row, idx) => {
-          const value = Number(Object.values(row)[1] ?? 0);
-          const y = Number.isFinite(value) ? value : 0;
-          return `${10 + idx * 25},${110 - Math.max(0, Math.min(100, y))}`;
-        })
-        .join(' ');
-
-      return (
-        <svg viewBox="0 0 320 120" className="h-24 w-full">
-          <polyline fill="none" stroke="var(--teal)" strokeWidth="2" points={points} />
-        </svg>
-      );
-    }
-
-    return (
-      <div className="overflow-x-auto rounded-md border border-white/10">
-        <table className="min-w-full text-xs">
-          <thead>
-            <tr>
-              {Object.keys(rows[0] ?? {}).map((k) => (
-                <th key={k} className="px-2 py-1 text-left text-slate-400">{k}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(0, 5).map((row, idx) => (
-              <tr key={idx} className="border-t border-white/5">
-                {Object.entries(row).map(([k, v]) => (
-                  <td key={k} className="px-2 py-1 font-mono">{String(v)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
-          <p className="text-sm text-slate-300">
-            {lastExecuted ? `Última coleta: ${lastExecuted.toLocaleString()}` : 'Sem dados coletados'}
-          </p>
+          <span className={`h-2.5 w-2.5 rounded-full ${statusColor} animate-pulse`} />
+          <p className="text-sm text-slate-300">{lastExecuted ? `Última coleta: ${lastExecuted.toLocaleString()}` : 'Sem dados coletados'}</p>
         </div>
-        <button
-          onClick={() => window.dispatchEvent(new Event('refresh-now'))}
-          className="flex items-center gap-2 rounded-lg border border-[var(--teal)]/40 bg-[var(--teal)]/10 px-3 py-2 text-sm text-[var(--teal)]"
-        >
+        <button onClick={() => window.dispatchEvent(new Event('refresh-now'))} className="btn-primary">
           <RefreshCw size={16} /> Atualizar Agora
         </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`rounded-full px-4 py-2 text-sm transition ${
-              activeTab === tab ? 'bg-[var(--teal)]/20 text-[var(--teal)]' : 'bg-white/5 text-slate-300'
-            }`}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`rounded-full px-4 py-2 text-sm transition ${activeTab === tab ? 'bg-[var(--teal)]/20 text-[var(--teal)]' : 'bg-white/5 text-slate-300'}`}>
             {tabLabels[tab]}
           </button>
         ))}
       </div>
 
-      {dashboardQuery.isLoading && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="h-40 animate-pulse rounded-xl border border-white/10 bg-white/5" />
-          ))}
-        </div>
-      )}
+      {dashboardQuery.isLoading && <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl border border-white/10 bg-white/5" />)}</div>}
 
-      {isEmpty && (
+      {!dashboardQuery.isLoading && panelList.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/20 p-12 text-center">
           <p className="text-lg font-semibold text-white">Nenhum dado disponível</p>
-          <p className="mt-2 text-sm text-slate-400">Configure uma conexão e execute os painéis.</p>
+          <p className="mt-2 text-sm text-slate-400">Configure conexão, painéis e execute um agendamento.</p>
         </div>
       )}
 
-      {!dashboardQuery.isLoading && !isEmpty && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {panelList.map((panel) => (
-            <article key={panel.panelId} className="panel-card rounded-xl border border-[var(--teal)]/30 bg-[#111827] p-4">
-              <header className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-100">{panel.displayName}</h3>
-                <span className="rounded-full bg-[var(--teal)]/15 px-2 py-1 text-xs text-[var(--teal)]">{panel.rowCount} rows</span>
-              </header>
+      {!dashboardQuery.isLoading && panelList.length > 0 && (
+        <div className="dashboard-grid">
+          {panelList.map((panel) => {
+            const type = (panel.data?.result_type ?? 'table') as PanelResultType;
+            const cfg = normalizeWidget(type, panel.data?.widget);
+            return (
+              <article
+                key={panel.panelId}
+                className="dashboard-widget rounded-xl border border-white/10 bg-[#0f1520] p-4"
+                style={{ ['--col-span' as string]: String(cfg.col), ['--row-span' as string]: String(cfg.row), minHeight: `${cfg.minHeight}px` }}
+              >
+                {cfg.showHeader && (
+                  <header className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-100">{panel.displayName}</h3>
+                      <p className="font-mono text-[11px] text-slate-500">{panel.panelKey}</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase text-slate-300">
+                      {type === 'table' && <Table2 size={12} />}
+                      {type === 'bar_chart' && <BarChart3 size={12} />}
+                      {type === 'line_chart' && <LineChart size={12} />}
+                      {type.replace('_', ' ')}
+                    </span>
+                  </header>
+                )}
 
-              <div className="gauge-wrap">
-                <svg viewBox="0 0 120 70" className="h-16 w-full">
-                  <path d="M10 60 A50 50 0 0 1 110 60" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
-                  <path d="M10 60 A50 50 0 0 1 110 60" stroke="var(--teal)" strokeWidth="8" fill="none" strokeDasharray="130" strokeDashoffset="35" />
-                </svg>
-              </div>
+                <PanelVisualization panel={panel} />
 
-              <div className="space-y-2 font-mono text-xs text-slate-300">
-                {renderPanelContent(panel)}
-              </div>
-            </article>
-          ))}
+                <footer className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>{panel.rowCount} rows</span>
+                  <span>{panel.durationMs} ms</span>
+                </footer>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

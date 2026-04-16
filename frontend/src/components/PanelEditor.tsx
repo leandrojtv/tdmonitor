@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, PlayCircle, Plus, Save, Wand2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, apiService } from '../services/api';
-import { PanelDefinition, PanelFieldMapping } from '../types/panel';
+import { PanelDefinition, PanelFieldMapping, PanelResultType, PanelWidgetConfig } from '../types/panel';
 
 type Props = {
   panel: PanelDefinition | null;
@@ -51,7 +51,8 @@ function mapPreviewRows(rows: Record<string, unknown>[], mappings: PanelFieldMap
 export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   const [tab, setTab] = useState<Tab>('sql');
   const [sqlQuery, setSqlQuery] = useState('');
-  const [resultType, setResultType] = useState<'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart'>('table');
+  const [resultType, setResultType] = useState<PanelResultType>('table');
+  const [widget, setWidget] = useState<PanelWidgetConfig>({});
   const [mappings, setMappings] = useState<PanelFieldMapping[]>([]);
   const [rawPreview, setRawPreview] = useState<Record<string, unknown>[]>([]);
   const [durationMs, setDurationMs] = useState(0);
@@ -66,6 +67,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
     setSqlQuery(panel.sqlQuery);
     setResultType(panel.fieldMappings.result_type);
     setMappings(panel.fieldMappings.mappings);
+    setWidget(panel.fieldMappings.widget ?? { col_span: 4, row_span: 1, min_height: 280, show_header: true, show_legend: true, show_table: false });
     setTab('sql');
     setRawPreview([]);
     setDurationMs(0);
@@ -153,7 +155,7 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
     try {
       await apiService.updatePanel(currentPanel.id, {
         sqlQuery,
-        fieldMappings: { result_type: resultType, mappings }
+        fieldMappings: { result_type: resultType, mappings, widget }
       });
 
       if (executeAfterSave) {
@@ -169,6 +171,11 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
   }
 
   const mappedRows = mapPreviewRows(rawPreview, mappings);
+
+  function updateWidget<K extends keyof PanelWidgetConfig>(key: K, value: PanelWidgetConfig[K]) {
+    setWidget((prev) => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80">
@@ -253,6 +260,40 @@ export function PanelEditor({ panel, open, onClose, onSaved }: Props) {
               <p><strong>kpi:</strong> métricas chave em StatCards.</p>
               <p><strong>bar_chart:</strong> comparação visual por categoria.</p>
               <p><strong>line_chart:</strong> evolução temporal/série.</p>
+            </div>
+
+            <div className="grid gap-3 rounded-lg border border-white/10 bg-[#0a0e14] p-3 md:grid-cols-3">
+              <label className="text-xs text-slate-300">Largura do widget
+                <select className="editor-input mt-1" value={widget.col_span ?? 4} onChange={(e) => updateWidget('col_span', Number(e.target.value) as 3 | 4 | 6 | 8 | 12)}>
+                  <option value={3}>Compacto (3/12)</option>
+                  <option value={4}>Padrão (4/12)</option>
+                  <option value={6}>Médio (6/12)</option>
+                  <option value={8}>Amplo (8/12)</option>
+                  <option value={12}>Tela cheia (12/12)</option>
+                </select>
+              </label>
+              <label className="text-xs text-slate-300">Altura do widget
+                <select className="editor-input mt-1" value={widget.row_span ?? 1} onChange={(e) => updateWidget('row_span', Number(e.target.value) as 1 | 2 | 3)}>
+                  <option value={1}>1 linha</option>
+                  <option value={2}>2 linhas</option>
+                  <option value={3}>3 linhas</option>
+                </select>
+              </label>
+              <label className="text-xs text-slate-300">Altura mínima (px)
+                <input className="editor-input mt-1" type="number" min={220} max={900} value={widget.min_height ?? 280} onChange={(e) => updateWidget('min_height', Number(e.target.value) || 280)} />
+              </label>
+              <label className="text-xs text-slate-300">Campo eixo X
+                <input className="editor-input mt-1" value={widget.x_field ?? ''} placeholder="ex.: databaseName" onChange={(e) => updateWidget('x_field', e.target.value)} />
+              </label>
+              <label className="text-xs text-slate-300">Campo eixo Y
+                <input className="editor-input mt-1" value={widget.y_field ?? ''} placeholder="ex.: currentPermTB" onChange={(e) => updateWidget('y_field', e.target.value)} />
+              </label>
+              <label className="text-xs text-slate-300">Cor do gráfico
+                <input className="editor-input mt-1" value={widget.color ?? 'var(--teal)'} placeholder="var(--teal)" onChange={(e) => updateWidget('color', e.target.value)} />
+              </label>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={widget.show_header ?? true} onChange={(e) => updateWidget('show_header', e.target.checked)} /> Mostrar cabeçalho</label>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={widget.show_legend ?? true} onChange={(e) => updateWidget('show_legend', e.target.checked)} /> Mostrar legenda</label>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={widget.show_table ?? false} onChange={(e) => updateWidget('show_table', e.target.checked)} /> Exibir tabela de apoio</label>
             </div>
 
             <button className="btn-editor" onClick={autoDetectFields}><Wand2 size={14} /> Auto-detectar Campos</button>

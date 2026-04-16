@@ -6,9 +6,22 @@ export type MappingItem = {
   label?: string;
 };
 
+export type WidgetConfig = {
+  col_span?: 3 | 4 | 6 | 8 | 12;
+  row_span?: 1 | 2 | 3;
+  min_height?: number;
+  show_table?: boolean;
+  show_legend?: boolean;
+  show_header?: boolean;
+  x_field?: string;
+  y_field?: string;
+  color?: string;
+};
+
 export type FieldMappings = {
   result_type?: 'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart';
   mappings?: MappingItem[];
+  widget?: WidgetConfig;
 };
 
 function formatDateBr(value: Date): string {
@@ -93,6 +106,7 @@ export function applyMapping(rawRows: Record<string, unknown>[], fieldMappings: 
       data_type: item.data_type ?? 'string',
       format: item.format ?? null
     })),
-    rows
+    rows,
+    widget: fieldMappings?.widget ?? {}
   };
 }

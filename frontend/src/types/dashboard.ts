@@ -1,11 +1,14 @@
+import { PanelResultType, PanelWidgetConfig } from './panel';
+
 export type DashboardPanelData = {
   panelId: string;
   panelKey: string;
   displayName: string;
   data: {
-    result_type?: 'single_row' | 'table' | 'kpi' | 'bar_chart' | 'line_chart';
+    result_type?: PanelResultType;
     columns?: Array<{ label: string; target_field: string }>;
     rows?: Record<string, unknown>[];
+    widget?: PanelWidgetConfig;
   } | null;
   executedAt: string | null;
   rowCount: number;
