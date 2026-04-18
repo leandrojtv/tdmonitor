@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-0: #0a0e14;
+  --teal: #2dd4bf;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --surface-2: #111827;
+  --border: rgba(148, 163, 184, 0.25);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--bg-0);
+  color: #e2e8f0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.font-mono,
+code,
+pre,
+.numeric {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.panel-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-top: 1px solid rgba(45, 212, 191, 0.35);
+  pointer-events: none;
+}
+
+.gauge-wrap {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.sql-key {
+  color: #2dd4bf;
+  font-weight: 600;
+}
+
+.editor-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: #e2e8f0;
+  padding: 0.35rem 0.5rem;
+  font-size: 12px;
+}
+
+.btn-editor,
+.btn-mini,
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-size: 12px;
+  background: rgba(45, 212, 191, 0.08);
+  color: var(--teal);
+}
+
+.btn-mini {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+}
+
+.btn-primary {
+  font-size: 14px;
+  background: rgba(45, 212, 191, 0.18);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-widget {
+  grid-column: span var(--col-span, 4);
+  grid-row: span var(--row-span, 1);
+}
+
+@media (max-width: 1279px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .dashboard-widget {
+    grid-column: span min(var(--col-span, 4), 6);
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-widget {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+}
